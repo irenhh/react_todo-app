@@ -1,61 +1,45 @@
 import React from 'react';
 import TodoList from './TodoList';
+import Filter from './Filter';
+import { hydrateStateWithLocalStorage, saveStateToLocalStorage } from './localStorageHelper';
 
 class App extends React.Component {
   state = {
     todoItems: [],
     todoItemsToShow: [],
     inputText: '',
-    activeFilterButton: {
-      all: true,
-      active: false,
-      completed: false,
-    },
+    activeFilterButton: 'all',
     editingText: '',
   }
 
   componentDidMount = () => {
-    this.hydrateStateWithLocalStorage();
+    this.setState((prevState) => {
+      const preparedState = hydrateStateWithLocalStorage(prevState);
+
+      return {
+        ...prevState,
+        ...preparedState,
+      };
+    });
 
     window.addEventListener(
       'beforeunload',
-      this.saveStateToLocalStorage
+      () => saveStateToLocalStorage(this.state)
     );
   }
 
   componentWillUnmount = () => {
     window.removeEventListener(
       'beforeunload',
-      this.saveStateToLocalStorage
+      () => saveStateToLocalStorage(this.state)
     );
 
-    this.saveStateToLocalStorage();
-  }
-
-  hydrateStateWithLocalStorage = () => {
-    Object.keys(this.state).forEach((key) => {
-      if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
-        let value = localStorage.getItem(key);
-
-        try {
-          value = JSON.parse(value);
-          this.setState({ [key]: value });
-        } catch (e) {
-          this.setState({ [key]: value });
-        }
-      }
-    });
-  }
-
-  saveStateToLocalStorage = () => {
-    Object.keys(this.state).forEach((key) => {
-      localStorage.setItem(key, JSON.stringify(this.state[key]));
-    });
+    saveStateToLocalStorage(this.state);
   }
 
   handleSubmit = (event) => {
     event.preventDefault();
-    if (!this.state.inputText) {
+    if (this.state.inputText.replace(/\s/g, '').length < 1) {
       return;
     }
 
@@ -78,21 +62,28 @@ class App extends React.Component {
   }
 
   handleCheckAll = (event) => {
-    const allCheckedTodos = this.state.todoItems;
-    allCheckedTodos.forEach(todo => (todo.isChecked = event.target.checked));
-    this.setState({
-      todoItems: allCheckedTodos,
-      todoItemsToShow: allCheckedTodos,
+    this.setState((prevState) => {
+      const allCheckedTodos = [...prevState.todoItems];
+      allCheckedTodos.forEach(todo => (todo.isChecked = event.target.checked));
+
+      return {
+        todoItems: allCheckedTodos,
+        todoItemsToShow: allCheckedTodos,
+      };
     });
   }
 
   handleItemChanged = (id) => {
     this.setState((prevState) => {
-      const checkedTodos = prevState.todoItemsToShow.map((todo) => {
-        if (todo.id === id) {
-          todo.isChecked = !todo.isChecked;
+      const checkedTodos = prevState.todoItems.map((todo) => {
+        if (todo.id !== id) {
+          return todo;
         }
-        return todo;
+
+        return {
+          ...todo,
+          isChecked: !todo.isChecked,
+        };
       });
 
       return {
@@ -104,11 +95,7 @@ class App extends React.Component {
 
   deleteItem = (id) => {
     this.setState((prevState) => {
-      const modifiedTodos = prevState.todoItems;
-      modifiedTodos
-        .splice(modifiedTodos
-          .indexOf(modifiedTodos
-            .find(todo => todo.id === id)), 1);
+      const modifiedTodos = prevState.todoItems.filter(todo => todo.id !== id);
 
       return { todoItems: modifiedTodos, todoItemsToShow: modifiedTodos };
     });
@@ -117,59 +104,35 @@ class App extends React.Component {
   deleteAllItems = () => {
     this.setState((prevState) => {
       const modifiedTodos = prevState.todoItems
-        .filter(todo => todo.isChecked === false);
+        .filter(todo => !todo.isChecked);
 
       return { todoItems: modifiedTodos, todoItemsToShow: modifiedTodos };
     });
   }
 
   showAllItems = () => {
-    this.setState((prevState) => {
-      const selectedButton = {
-        all: true,
-        active: false,
-        completed: false,
-      };
-
-      return {
-        todoItemsToShow: prevState.todoItems,
-        activeFilterButton: selectedButton,
-      };
-    });
+    this.setState(prevState => ({
+      todoItemsToShow: prevState.todoItems,
+      activeFilterButton: 'all',
+    }));
   }
 
   showUnchecked = () => {
-    this.setState((prevState) => {
-      const selectedButton = {
-        all: false,
-        active: true,
-        completed: false,
-      };
+    this.setState(prevState => ({
+      todoItemsToShow: prevState.todoItems
+        .filter(todo => !todo.isChecked),
 
-      return {
-        todoItemsToShow: prevState.todoItems
-          .filter(todo => todo.isChecked === false),
-
-        activeFilterButton: selectedButton,
-      };
-    });
+      activeFilterButton: 'active',
+    }));
   }
 
   showChecked = () => {
-    this.setState((prevState) => {
-      const selectedButton = {
-        all: false,
-        active: false,
-        completed: true,
-      };
+    this.setState(prevState => ({
+      todoItemsToShow: prevState.todoItems
+        .filter(todo => todo.isChecked),
 
-      return {
-        todoItemsToShow: prevState.todoItems
-          .filter(todo => todo.isChecked === true),
-
-        activeFilterButton: selectedButton,
-      };
-    });
+      activeFilterButton: 'completed',
+    }));
   }
 
   makeEditable = (id) => {
@@ -178,12 +141,16 @@ class App extends React.Component {
         if (todo.id === id) {
           todo.isInEditMode = true;
         }
+
         return todo;
       });
+
+      const editingText = prevState.todoItemsToShow
+        .find(todo => todo.id === id).body;
+
       return {
         todoItemsToShow: editableItems,
-        editingText: prevState.todoItemsToShow
-          .find(todo => todo.id === id).body,
+        editingText,
       };
     });
   }
@@ -192,9 +159,11 @@ class App extends React.Component {
     event.preventDefault();
     this.setState((prevState) => {
       const itemToEdit = prevState.todoItemsToShow.find(todo => todo.id === id);
+
       if (prevState.editingText.length < 1) {
         return this.deleteItem(id);
       }
+
       itemToEdit.body = prevState.editingText;
       itemToEdit.isInEditMode = false;
 
@@ -219,12 +188,10 @@ class App extends React.Component {
     this.setState({ editingText: event.target.value });
   }
 
-  stopPropagation = (event) => {
-    event.stopPropagation();
-  }
-
   render() {
-    console.log(this.state.todoItemsToShow.map(todo => todo.isInEditMode));
+    const uncheckedItems = [...this.state.todoItems]
+      .filter(todo => !todo.isChecked).length;
+
     return (
       <section className="todoapp">
         <header className="header">
@@ -246,7 +213,7 @@ class App extends React.Component {
             id="toggle-all"
             className="toggle-all"
             checked={!(this.state.todoItems
-              .some(todo => todo.isChecked === false))}
+              .some(todo => !todo.isChecked))}
             onChange={this.handleCheckAll}
           />
           <label htmlFor="toggle-all">Mark all as complete</label>
@@ -260,7 +227,6 @@ class App extends React.Component {
               changeItemBody={this.changeItemBody}
               getInputText={this.getInputText}
               exitEditing={this.exitEditing}
-              stopPropagation={this.stopPropagation}
               editingText={this.state.editingText}
             />
           </ul>
@@ -268,46 +234,16 @@ class App extends React.Component {
 
         <footer className="footer" style={{ display: 'block' }}>
           <span className="todo-count">
-            {`${[...this.state.todoItems]
-              .filter(todo => todo.isChecked === false).length} items left`}
+            {`${uncheckedItems} items left`}
           </span>
 
           <ul className="filters">
-            <li>
-              <a
-                href="#/"
-                className={this.state.activeFilterButton.all
-                  ? 'selected'
-                  : null}
-                onClick={this.showAllItems}
-              >
-                All
-              </a>
-            </li>
-
-            <li>
-              <a
-                href="#/active"
-                className={this.state.activeFilterButton.active
-                  ? 'selected'
-                  : null}
-                onClick={this.showUnchecked}
-              >
-                Active
-              </a>
-            </li>
-
-            <li>
-              <a
-                href="#/completed"
-                className={this.state.activeFilterButton.completed
-                  ? 'selected'
-                  : null}
-                onClick={this.showChecked}
-              >
-                Completed
-              </a>
-            </li>
+            <Filter
+              activeFilterButton={this.state.activeFilterButton}
+              showAllItems={this.showAllItems}
+              showChecked={this.showChecked}
+              showUnchecked={this.showUnchecked}
+            />
           </ul>
 
           <button

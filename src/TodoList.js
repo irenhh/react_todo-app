@@ -1,21 +1,34 @@
 import React from 'react';
+import PropTypes from 'prop-types';
+import ListEditor from './ListEditor';
 
 function TodoList(props) {
+  const {
+    listOfTodos,
+    changeItemBody,
+    editingText,
+    getInputText,
+    exitEditing,
+    onChange,
+    makeEditable,
+    deleteItem,
+  } = props;
+
   return (
-    props.listOfTodos.map((todo, index) => (
+    listOfTodos.map((todo, index) => (
       <li
         className={`editing ${todo.isChecked ? 'completed' : ''}`}
         key={todo.id}
       >
-        <form onSubmit={event => props.changeItemBody(todo.id, event)}>
-          <input
-            type="text"
-            className={todo.isInEditMode ? 'edit' : 'view'}
-            value={props.editingText}
-            onChange={props.getInputText}
-            onBlur={() => props.exitEditing(todo.id)}
+        {todo.isInEditMode && (
+          <ListEditor
+            todo={todo}
+            changeItemBody={changeItemBody}
+            editingText={editingText}
+            getInputText={getInputText}
+            exitEditing={exitEditing}
           />
-        </form>
+        )}
 
         <div className={todo.isInEditMode ? 'view' : ''}>
           <input
@@ -23,12 +36,12 @@ function TodoList(props) {
             className="toggle"
             id={`todo-${index + 1}`}
             checked={todo.isChecked}
-            onChange={() => props.onChange(todo.id)}
+            onChange={() => onChange(todo.id)}
           />
 
           <label
-            onDoubleClick={() => props.makeEditable(todo.id)}
-            onClick={props.stopPropagation}
+            onDoubleClick={() => makeEditable(todo.id)}
+            onClick={event => event.stopPropagation()}
           >
             {todo.body}
           </label>
@@ -36,12 +49,23 @@ function TodoList(props) {
           <button
             type="button"
             className="destroy"
-            onClick={() => props.deleteItem(todo.id)}
+            onClick={() => deleteItem(todo.id)}
           />
         </div>
       </li>
     ))
   );
 }
+
+TodoList.propTypes = {
+  listOfTodos: PropTypes.arrayOf(PropTypes.object).isRequired,
+  changeItemBody: PropTypes.func.isRequired,
+  editingText: PropTypes.string.isRequired,
+  getInputText: PropTypes.func.isRequired,
+  exitEditing: PropTypes.func.isRequired,
+  onChange: PropTypes.func.isRequired,
+  makeEditable: PropTypes.func.isRequired,
+  deleteItem: PropTypes.func.isRequired,
+};
 
 export default TodoList;
