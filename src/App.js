@@ -62,9 +62,11 @@ class App extends React.Component {
   }
 
   handleCheckAll = (event) => {
+    const isTodoChecked = event.target.checked;
+
     this.setState((prevState) => {
       const allCheckedTodos = [...prevState.todoItems];
-      allCheckedTodos.forEach(todo => (todo.isChecked = event.target.checked));
+      allCheckedTodos.forEach(todo => (todo.isChecked = isTodoChecked));
 
       return {
         todoItems: allCheckedTodos,
