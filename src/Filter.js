@@ -4,9 +4,7 @@ import PropTypes from 'prop-types';
 function Filter(props) {
   const {
     activeFilterButton,
-    showAllItems,
-    showChecked,
-    showUnchecked,
+    visibleList,
   } = props;
 
   return (
@@ -16,8 +14,8 @@ function Filter(props) {
           href="#/"
           className={activeFilterButton === 'all'
             ? 'selected'
-            : null}
-          onClick={showAllItems}
+            : ''}
+          onClick={() => visibleList('all')}
         >
           All
         </a>
@@ -28,8 +26,8 @@ function Filter(props) {
           href="#/active"
           className={activeFilterButton === 'active'
             ? 'selected'
-            : null}
-          onClick={showUnchecked}
+            : ''}
+          onClick={() => visibleList('active')}
         >
           Active
         </a>
@@ -40,8 +38,8 @@ function Filter(props) {
           href="#/completed"
           className={activeFilterButton === 'completed'
             ? 'selected'
-            : null}
-          onClick={showChecked}
+            : ''}
+          onClick={() => visibleList('completed')}
         >
           Completed
         </a>
@@ -52,9 +50,7 @@ function Filter(props) {
 
 Filter.propTypes = {
   activeFilterButton: PropTypes.string.isRequired,
-  showAllItems: PropTypes.func.isRequired,
-  showChecked: PropTypes.func.isRequired,
-  showUnchecked: PropTypes.func.isRequired,
+  visibleList: PropTypes.func.isRequired,
 };
 
 export default Filter;

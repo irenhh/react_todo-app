@@ -39,12 +39,12 @@ function TodoList(props) {
             onChange={() => onChange(todo.id)}
           />
 
-          <label
+          <span
             onDoubleClick={() => makeEditable(todo.id)}
             onClick={event => event.stopPropagation()}
           >
             {todo.body}
-          </label>
+          </span>
 
           <button
             type="button"

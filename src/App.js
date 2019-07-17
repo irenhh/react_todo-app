@@ -112,34 +112,9 @@ class App extends React.Component {
     });
   }
 
-  showAllItems = () => {
-    this.setState(prevState => ({
-      todoItemsToShow: prevState.todoItems,
-      activeFilterButton: 'all',
-    }));
-  }
-
-  showUnchecked = () => {
-    this.setState(prevState => ({
-      todoItemsToShow: prevState.todoItems
-        .filter(todo => !todo.isChecked),
-
-      activeFilterButton: 'active',
-    }));
-  }
-
-  showChecked = () => {
-    this.setState(prevState => ({
-      todoItemsToShow: prevState.todoItems
-        .filter(todo => todo.isChecked),
-
-      activeFilterButton: 'completed',
-    }));
-  }
-
   makeEditable = (id) => {
     this.setState((prevState) => {
-      const editableItems = prevState.todoItemsToShow.map((todo) => {
+      const editableItems = prevState.todoItems.map((todo) => {
         if (todo.id === id) {
           todo.isInEditMode = true;
         }
@@ -147,11 +122,11 @@ class App extends React.Component {
         return todo;
       });
 
-      const editingText = prevState.todoItemsToShow
+      const editingText = prevState.todoItems
         .find(todo => todo.id === id).body;
 
       return {
-        todoItemsToShow: editableItems,
+        todoItems: editableItems,
         editingText,
       };
     });
@@ -160,7 +135,7 @@ class App extends React.Component {
   changeItemBody = (id, event) => {
     event.preventDefault();
     this.setState((prevState) => {
-      const itemToEdit = prevState.todoItemsToShow.find(todo => todo.id === id);
+      const itemToEdit = prevState.todoItems.find(todo => todo.id === id);
 
       if (prevState.editingText.length < 1) {
         return this.deleteItem(id);
@@ -177,7 +152,7 @@ class App extends React.Component {
 
   exitEditing = (id) => {
     this.setState((prevState) => {
-      const itemToEdit = prevState.todoItemsToShow.find(todo => todo.id === id);
+      const itemToEdit = prevState.todoItems.find(todo => todo.id === id);
       itemToEdit.isInEditMode = false;
 
       return {
@@ -189,6 +164,45 @@ class App extends React.Component {
   getInputText = (event) => {
     this.setState({ editingText: event.target.value });
   }
+
+  memoizedItemsList = () => {
+    let cache = {};
+
+    return (status) => {
+      if (status in cache) {
+        this.setState({
+          todoItemsToShow: cache[status],
+          activeFilterButton: status,
+        });
+      } else {
+        let modifiedTodos;
+
+        switch (status) {
+          case 'active': modifiedTodos = this.state.todoItems
+            .filter(todo => !todo.isChecked);
+            break;
+
+          case 'completed': modifiedTodos = this.state.todoItems
+            .filter(todo => todo.isChecked);
+            break;
+
+          default: modifiedTodos = [...this.state.todoItems];
+        }
+
+        cache = {
+          ...cache,
+          [status]: modifiedTodos,
+        };
+
+        this.setState({
+          todoItemsToShow: modifiedTodos,
+          activeFilterButton: status,
+        });
+      }
+    };
+  }
+
+  visibleList = this.memoizedItemsList(this.state.todoItems);
 
   render() {
     const uncheckedItems = [...this.state.todoItems]
@@ -242,9 +256,7 @@ class App extends React.Component {
           <ul className="filters">
             <Filter
               activeFilterButton={this.state.activeFilterButton}
-              showAllItems={this.showAllItems}
-              showChecked={this.showChecked}
-              showUnchecked={this.showUnchecked}
+              visibleList={this.visibleList}
             />
           </ul>
 
