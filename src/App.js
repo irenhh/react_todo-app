@@ -2,11 +2,11 @@ import React from 'react';
 import TodoList from './TodoList';
 import Filter from './Filter';
 import { hydrateStateWithLocalStorage, saveStateToLocalStorage } from './localStorageHelper';
+import { visibleList } from './filterMemoize';
 
 class App extends React.Component {
   state = {
     todoItems: [],
-    todoItemsToShow: [],
     inputText: '',
     activeFilterButton: 'all',
     editingText: '',
@@ -52,7 +52,6 @@ class App extends React.Component {
 
     this.setState(prevState => ({
       todoItems: prevState.todoItems.concat(newTodo),
-      todoItemsToShow: prevState.todoItems.concat(newTodo),
       inputText: '',
     }));
   }
@@ -70,7 +69,6 @@ class App extends React.Component {
 
       return {
         todoItems: allCheckedTodos,
-        todoItemsToShow: allCheckedTodos,
       };
     });
   }
@@ -90,7 +88,6 @@ class App extends React.Component {
 
       return {
         todoItems: checkedTodos,
-        todoItemsToShow: checkedTodos,
       };
     });
   }
@@ -99,7 +96,7 @@ class App extends React.Component {
     this.setState((prevState) => {
       const modifiedTodos = prevState.todoItems.filter(todo => todo.id !== id);
 
-      return { todoItems: modifiedTodos, todoItemsToShow: modifiedTodos };
+      return { todoItems: modifiedTodos };
     });
   }
 
@@ -108,7 +105,7 @@ class App extends React.Component {
       const modifiedTodos = prevState.todoItems
         .filter(todo => !todo.isChecked);
 
-      return { todoItems: modifiedTodos, todoItemsToShow: modifiedTodos };
+      return { todoItems: modifiedTodos };
     });
   }
 
@@ -165,48 +162,15 @@ class App extends React.Component {
     this.setState({ editingText: event.target.value });
   }
 
-  memoizedItemsList = () => {
-    let cache = {};
-
-    return (status) => {
-      if (status in cache) {
-        this.setState({
-          todoItemsToShow: cache[status],
-          activeFilterButton: status,
-        });
-      } else {
-        let modifiedTodos;
-
-        switch (status) {
-          case 'active': modifiedTodos = this.state.todoItems
-            .filter(todo => !todo.isChecked);
-            break;
-
-          case 'completed': modifiedTodos = this.state.todoItems
-            .filter(todo => todo.isChecked);
-            break;
-
-          default: modifiedTodos = [...this.state.todoItems];
-        }
-
-        cache = {
-          ...cache,
-          [status]: modifiedTodos,
-        };
-
-        this.setState({
-          todoItemsToShow: modifiedTodos,
-          activeFilterButton: status,
-        });
-      }
-    };
+  handleFilter = (status) => {
+    this.setState({ activeFilterButton: status });
   }
-
-  visibleList = this.memoizedItemsList(this.state.todoItems);
 
   render() {
     const uncheckedItems = [...this.state.todoItems]
       .filter(todo => !todo.isChecked).length;
+
+    const todoItemsToShow = visibleList(this.state.todoItems, this.state.activeFilterButton);
 
     return (
       <section className="todoapp">
@@ -236,7 +200,7 @@ class App extends React.Component {
 
           <ul className="todo-list">
             <TodoList
-              listOfTodos={this.state.todoItemsToShow}
+              listOfTodos={todoItemsToShow}
               onChange={this.handleItemChanged}
               deleteItem={this.deleteItem}
               makeEditable={this.makeEditable}
@@ -256,7 +220,7 @@ class App extends React.Component {
           <ul className="filters">
             <Filter
               activeFilterButton={this.state.activeFilterButton}
-              visibleList={this.visibleList}
+              handleFilter={this.handleFilter}
             />
           </ul>
 

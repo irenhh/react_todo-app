@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 function Filter(props) {
   const {
     activeFilterButton,
-    visibleList,
+    handleFilter,
   } = props;
 
   return (
@@ -15,7 +15,7 @@ function Filter(props) {
           className={activeFilterButton === 'all'
             ? 'selected'
             : ''}
-          onClick={() => visibleList('all')}
+          onClick={() => handleFilter('all')}
         >
           All
         </a>
@@ -27,7 +27,7 @@ function Filter(props) {
           className={activeFilterButton === 'active'
             ? 'selected'
             : ''}
-          onClick={() => visibleList('active')}
+          onClick={() => handleFilter('active')}
         >
           Active
         </a>
@@ -39,7 +39,7 @@ function Filter(props) {
           className={activeFilterButton === 'completed'
             ? 'selected'
             : ''}
-          onClick={() => visibleList('completed')}
+          onClick={() => handleFilter('completed')}
         >
           Completed
         </a>
@@ -50,7 +50,7 @@ function Filter(props) {
 
 Filter.propTypes = {
   activeFilterButton: PropTypes.string.isRequired,
-  visibleList: PropTypes.func.isRequired,
+  handleFilter: PropTypes.func.isRequired,
 };
 
 export default Filter;
